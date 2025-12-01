@@ -34,9 +34,16 @@ class SavedBuildingsViewModel {
     
     /// 찜한 건물 목록 로드
     @MainActor
-    func loadSavedBuildings() async {
+    func loadSavedBuildings(userId: Int? = nil) async {
         isLoading = true
         errorMessage = nil
+        
+        let effectiveUserId: Int? = userId ?? AuthManager.shared.currentUser?.userId
+        guard let uid = effectiveUserId else {
+            self.errorMessage = "로그인이 필요합니다"
+            self.isLoading = false
+            return
+        }
         
         do {
             let response = try await apiService.getSavedBuildings()
@@ -68,3 +75,4 @@ class SavedBuildingsViewModel {
         navigationRouter.push(to: .buildingDetail(buildingId: buildingId))
     }
 }
+

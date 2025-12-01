@@ -19,61 +19,64 @@ struct NavigationRoutingView: View {
     
     // MARK: - Body
     var body: some View {
-        Group {
-            switch destination {
-            case .contentView:
-                ContentView()
-                
-            // MARK: - Map Tab
-            case .map:
-                MapView(navigationRouter: container.navigationRouter)
-                
-            case .buildingDetail(let buildingId):
-                BuildingDetailView(
-                    buildingId: buildingId,
-                    navigationRouter: container.navigationRouter
-                )
-                
-            case .pointSearchResult(let latitude, let longitude):
-                PointSearchResultView(
-                    latitude: latitude,
-                    longitude: longitude,
-                    navigationRouter: container.navigationRouter
-                )
-                
-            case .reviewWrite(let buildingId):
-                ReviewWriteView(
-                    buildingId: buildingId,
-                    navigationRouter: container.navigationRouter
-                )
-                
-            case .reviewList(let buildingId):
-                ReviewListView(buildingId: buildingId)
-                
-            // MARK: - Saved Tab
-            case .savedBuildings:
-                SavedBuildingsView(
-                    navigationRouter: container.navigationRouter
-                )
-                
-            case .savedBuildingDetail(let saveId):
-                // saveId를 통해 buildingId를 조회하거나, 직접 buildingId를 전달받아야 함
-                // 임시로 saveId를 buildingId로 사용
-                BuildingDetailView(
-                    buildingId: saveId,
-                    navigationRouter: container.navigationRouter
-                )
-                
-            // MARK: - Profile Tab
-            case .profile:
-                ProfileView()
-                
-            case .settings:
-                SettingsView()
-            }
+        destinationView
+            // 각 하위 뷰에도 DIContainer를 공유해줌
+            .environmentObject(container)
+    }
+    
+    @ViewBuilder
+    private var destinationView: some View {
+        switch destination {
+        case .contentView:
+            ContentView()
+        // MARK: - Map Tab
+        case .map:
+            MapView(navigationRouter: container.navigationRouter)
+            
+        case .buildingDetail(let buildingId):
+            BuildingDetailView(
+                buildingId: buildingId,
+                navigationRouter: container.navigationRouter
+            )
+            
+        case .pointSearchResult(let latitude, let longitude):
+            PointSearchResultView(
+                latitude: latitude,
+                longitude: longitude,
+                navigationRouter: container.navigationRouter
+            )
+            
+        case .reviewWrite(let buildingId):
+            ReviewWriteView(
+                buildingId: buildingId,
+                navigationRouter: container.navigationRouter
+            )
+            
+        case .reviewList(let buildingId):
+            ReviewListView(buildingId: buildingId)
+            
+        // MARK: - Saved Tab
+        case .savedBuildings:
+            SavedBuildingsView(
+                navigationRouter: container.navigationRouter
+            )
+            
+        case .savedBuildingDetail(let saveId):
+            // saveId를 통해 buildingId를 조회하거나, 직접 buildingId를 전달받아야 함
+            // 임시로 saveId를 buildingId로 사용
+            BuildingDetailView(
+                buildingId: saveId,
+                navigationRouter: container.navigationRouter
+            )
+            
+        // MARK: - Profile Tab
+        case .profile:
+            ProfileView()
+                .environmentObject(container.authManager)
+            
+        case .settings:
+            SettingsView()
         }
-        // 각 하위 뷰에도 DIContainer를 공유해줌
-        .environmentObject(container)
     }
 }
 

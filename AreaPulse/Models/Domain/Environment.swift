@@ -29,43 +29,49 @@ struct EnvironmentStation: Identifiable, Codable, Hashable {
     }
 }
 
-/// 환경 데이터 모델 (T_ENVIRONMENT_DATA 테이블 대응)
+/// 환경 데이터 모델 - API 응답에 맞게 재구성
 struct EnvironmentData: Identifiable, Codable, Hashable {
-    let id: Int
-    let stationId: Int
-    let measurementTime: Date
-    let pm10Value: Int?
-    let pm25Value: Int?
-    let noiseDb: Double?
+    let address: String
+    let noiseMax: Double
+    let noiseAvg: Double
+    let noiseMin: Double
+    let latitude: Double
+    let longitude: Double
+    
+    var id: String { address }
     
     enum CodingKeys: String, CodingKey {
-        case id = "data_id"
-        case stationId = "station_id"
-        case measurementTime = "measurement_time"
-        case pm10Value = "pm10_value"
-        case pm25Value = "pm2_5_value"
-        case noiseDb = "noise_db"
+        case address
+        case noiseMax = "noise_max"
+        case noiseAvg = "noise_avg"
+        case noiseMin = "noise_min"
+        case latitude
+        case longitude
     }
     
-    /// 미세먼지 등급
-    var pm10Grade: String {
-        guard let value = pm10Value else { return "정보없음" }
-        switch value {
-        case 0...30: return "좋음"
-        case 31...80: return "보통"
-        case 81...150: return "나쁨"
-        default: return "매우나쁨"
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    /// 소음 등급
+    var noiseGrade: String {
+        switch noiseAvg {
+        case 0..<50: return "조용함"
+        case 50..<60: return "보통"
+        case 60..<70: return "다소 시끄러움"
+        case 70..<80: return "시끄러움"
+        default: return "매우 시끄러움"
         }
     }
     
-    /// 초미세먼지 등급
-    var pm25Grade: String {
-        guard let value = pm25Value else { return "정보없음" }
-        switch value {
-        case 0...15: return "좋음"
-        case 16...35: return "보통"
-        case 36...75: return "나쁨"
-        default: return "매우나쁨"
+    /// 소음 등급 색상
+    var noiseGradeColor: String {
+        switch noiseAvg {
+        case 0..<50: return "green"
+        case 50..<60: return "blue"
+        case 60..<70: return "yellow"
+        case 70..<80: return "orange"
+        default: return "red"
         }
     }
 }

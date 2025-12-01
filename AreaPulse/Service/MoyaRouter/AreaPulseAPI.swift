@@ -10,27 +10,40 @@ import Moya
 
 /// AreaPulse API 엔드포인트 정의
 enum AreaPulseAPI {
+    // MARK: - Auth
+    case register(email: String, password: String, nickname: String)
+    case login(email: String, password: String)
+    case refreshToken(refreshToken: String)
+    case logout
+    
+    // MARK: - Search
     // 핀포인트 검색
     case pointSearch(latitude: Double, longitude: Double, radiusMeters: Int)
     
+    // MARK: - Building
     // 건물 관련
     case buildingDetail(buildingId: Int)
     case buildingReviews(buildingId: Int)
     
+    // MARK: - Review
     // 리뷰 관련
     case createReview(buildingId: Int, rating: Int, content: String)
     
+    // MARK: - Saved Building
     // 찜하기 관련
     case savedBuildings
     case saveBuilding(buildingId: Int, memo: String?)
     case deleteSavedBuilding(saveId: Int)
     
+    // MARK: - Infrastructure
     // 인프라 관련
     case infrastructureByCategory(category: InfraCategory, latitude: Double, longitude: Double, radiusMeters: Int)
     
+    // MARK: - Region
     // 지역 통계
     case regionStats(bjdCode: String)
     
+    // MARK: - Environment
     // 환경 데이터
     case environmentData(latitude: Double, longitude: Double)
 }
@@ -38,12 +51,19 @@ enum AreaPulseAPI {
 extension AreaPulseAPI: TargetType {
     
     var baseURL: URL {
-        // TODO: 실제 서버 URL로 변경
-        return URL(string: "https://your-api-server.com/api/v1")!
+        return URL(string: "http://3.35.232.62:8000/api/v1")!
     }
     
     var path: String {
         switch self {
+        case .register:
+            return "/auth/register"
+        case .login:
+            return "/auth/login"
+        case .refreshToken:
+            return "/auth/refresh"
+        case .logout:
+            return "/auth/logout"
         case .pointSearch:
             return "/search/point"
         case .buildingDetail:
@@ -80,6 +100,35 @@ extension AreaPulseAPI: TargetType {
     
     var task: Task {
         switch self {
+        case .register(let email, let password, let nickname):
+            let parameters: [String: Any] = [
+                "email": email,
+                "password": password,
+                "nickname": nickname
+            ]
+            return .requestParameters(parameters: parameters, encoding: JSONEncoding.default)
+            
+        case .login(let email, let password):
+            // OAuth2 형식: application/x-www-form-urlencoded
+            let parameters: [String: Any] = [
+                "grant_type": "",
+                "username": email,
+                "password": password,
+                "scope": "",
+                "client_id": "",
+                "client_secret": ""
+            ]
+            return .requestParameters(parameters: parameters, encoding: URLEncoding.default)
+            
+        case .refreshToken(let refreshToken):
+            let parameters: [String: Any] = [
+                "refresh_token": refreshToken
+            ]
+            return .requestParameters(parameters: parameters, encoding: JSONEncoding.default)
+            
+        case .logout:
+            return .requestPlain
+            
         case .pointSearch(let latitude, let longitude, let radiusMeters):
             let parameters: [String: Any] = [
                 "latitude": latitude,
@@ -110,7 +159,7 @@ extension AreaPulseAPI: TargetType {
             
         case .savedBuildings:
             return .requestPlain
-            
+
         case .saveBuilding(let buildingId, let memo):
             var parameters: [String: Any] = [
                 "building_id": buildingId
@@ -156,10 +205,25 @@ extension AreaPulseAPI: TargetType {
             "Accept": "application/json"
         ]
         
-        // TODO: 인증 토큰이 필요한 경우
-        // if let token = AuthManager.shared.token {
-        //     headers["Authorization"] = "Bearer \(token)"
-        // }
+        // Login은 OAuth2 형식이므로 Content-Type을 변경
+        switch self {
+        case .login:
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        default:
+            break
+        }
+        
+        // 인증이 필요하지 않은 엔드포인트
+        switch self {
+        case .register, .login, .refreshToken:
+            // 토큰 불필요
+            break
+        default:
+            // 나머지는 모두 토큰 필요
+            if let token = AuthManager.shared.accessToken {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        }
         
         return headers
     }
@@ -172,6 +236,18 @@ extension AreaPulseAPI: TargetType {
     
     var sampleData: Data {
         switch self {
+        case .register:
+            return registerMockData()
+            
+        case .login:
+            return loginMockData()
+            
+        case .refreshToken:
+            return refreshTokenMockData()
+            
+        case .logout:
+            return logoutMockData()
+            
         case .buildingDetail(let buildingId):
             return buildingDetailMockData(buildingId: buildingId)
             
@@ -205,6 +281,42 @@ extension AreaPulseAPI: TargetType {
     }
     
     // MARK: - Mock Data Generators
+    
+    private func registerMockData() -> Data {
+        let json: [String: Any] = [
+            "user_id": Int.random(in: 1...1000),
+            "email": "test@example.com",
+            "nickname": "테스트유저",
+            "created_at": ISO8601DateFormatter().string(from: Date())
+        ]
+        return try! JSONSerialization.data(withJSONObject: json)
+    }
+    
+    private func loginMockData() -> Data {
+        let json: [String: Any] = [
+            "access_token": "mock_access_token_\(UUID().uuidString)",
+            "refresh_token": "mock_refresh_token_\(UUID().uuidString)",
+            "token_type": "bearer"
+        ]
+        return try! JSONSerialization.data(withJSONObject: json)
+    }
+    
+    private func refreshTokenMockData() -> Data {
+        let json: [String: Any] = [
+            "access_token": "mock_access_token_\(UUID().uuidString)",
+            "refresh_token": "mock_refresh_token_\(UUID().uuidString)",
+            "token_type": "bearer"
+        ]
+        return try! JSONSerialization.data(withJSONObject: json)
+    }
+    
+    private func logoutMockData() -> Data {
+        let json: [String: Any] = [
+            "message": "로그아웃되었습니다.",
+            "user_id": 1
+        ]
+        return try! JSONSerialization.data(withJSONObject: json)
+    }
     
     private func buildingDetailMockData(buildingId: Int) -> Data {
         let mockBuildings: [[String: Any]] = [

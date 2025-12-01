@@ -9,17 +9,43 @@ import SwiftUI
 
 /// 별점 표시 뷰
 struct RatingStarsView: View {
-    let rating: Int
+    let rating: Double
     let maxRating: Int = 5
+    
+    // Int를 받는 초기화
+    init(rating: Int) {
+        self.rating = Double(rating)
+    }
+    
+    // Double을 받는 초기화
+    init(rating: Double) {
+        self.rating = rating
+    }
     
     var body: some View {
         HStack(spacing: 4) {
             ForEach(1...maxRating, id: \.self) { index in
-                Image(systemName: index <= rating ? "star.fill" : "star")
+                Image(systemName: starName(for: index))
                     .font(.caption)
-                    .foregroundStyle(index <= rating ? .yellow : .gray)
+                    .foregroundStyle(starColor(for: index))
             }
         }
+    }
+    
+    private func starName(for index: Int) -> String {
+        let difference = rating - Double(index - 1)
+        
+        if difference >= 1.0 {
+            return "star.fill"
+        } else if difference > 0.0 && difference < 1.0 {
+            return "star.leadinghalf.fill"
+        } else {
+            return "star"
+        }
+    }
+    
+    private func starColor(for index: Int) -> Color {
+        return rating >= Double(index - 1) ? .yellow : .gray
     }
 }
 

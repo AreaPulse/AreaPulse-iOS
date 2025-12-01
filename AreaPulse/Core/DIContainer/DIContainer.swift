@@ -17,14 +17,19 @@ class DIContainer: ObservableObject {
     /// API 서비스
     let apiService: AreaPulseAPIService
     
+    /// 인증 관리자
+    let authManager: AuthManager
+    
     /// DIContainer 초기화 함수
     /// 외부에서 navigationRouter와 useCaseService를 주입받아 사용할 수 있도록 구성
     /// 기본값으로는 각각 새로운 인스턴스를 생성하여 초기화
     init(
         navigationRouter: NavigationRouter = .init(),
-        apiService: AreaPulseAPIService = AreaPulseAPIService()
+        apiService: AreaPulseAPIService = AreaPulseAPIService(),
+        authManager: AuthManager = .shared
     ) {
         self.navigationRouter = navigationRouter
         self.apiService = apiService
+        self.authManager = authManager
     }
 }
