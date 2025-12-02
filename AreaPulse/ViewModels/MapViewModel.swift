@@ -48,6 +48,9 @@ class MapViewModel {
     /// 건물 표시 여부 - 기본값: 표시
     var showBuildings: Bool = true
     
+    /// 선택된 건물 타입 필터 - 기본값: 아파트, 연립다세대만
+    var selectedBuildingTypes: Set<BuildingType> = Set(BuildingType.mapFilterTypes)
+    
     /// 선택된 인프라 카테고리 (상세 목록 표시용)
     var selectedInfraCategory: InfraCategory?
     
@@ -136,6 +139,24 @@ class MapViewModel {
         }
     }
     
+    /// 건물 타입 토글
+    func toggleBuildingType(_ type: BuildingType) {
+        if selectedBuildingTypes.contains(type) {
+            selectedBuildingTypes.remove(type)
+        } else {
+            selectedBuildingTypes.insert(type)
+        }
+    }
+    
+    /// 전체 건물 타입 선택/해제
+    func toggleAllBuildingTypes() {
+        if selectedBuildingTypes.count == BuildingType.mapFilterTypes.count {
+            selectedBuildingTypes.removeAll()
+        } else {
+            selectedBuildingTypes = Set(BuildingType.mapFilterTypes)
+        }
+    }
+    
     /// ✅ 필터링된 인프라 목록
     /// - nearbyInfrastructure: 이미 school/subway/park만 들어 있음
     /// - selectedInfraCategories: 그중에서 유저가 켜둔 것만
@@ -148,12 +169,19 @@ class MapViewModel {
         }
     }
     
-    /// 필터링된 건물 목록
+    /// 필터링된 건물 목록 (건물 타입 필터 적용)
     var filteredBuildings: [Building] {
-        if showBuildings {
-            return nearbyBuildings
+        guard showBuildings else { return [] }
+        
+        // 선택된 건물 타입이 없으면 빈 배열
+        if selectedBuildingTypes.isEmpty {
+            return []
         }
-        return []
+        
+        // 건물 타입 필터링
+        return nearbyBuildings.filter { building in
+            selectedBuildingTypes.contains(building.buildingType)
+        }
     }
     
     /// 지역을 특정 좌표로 이동
