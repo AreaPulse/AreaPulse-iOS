@@ -34,12 +34,22 @@ struct MapView: View {
                         .padding(.horizontal)
                 }
                 
-                // 인프라 필터 (건물 포함)
+                // 인프라 필터 + 건물 타입 필터
                 if !viewModel.showSearchResults {
-                    InfraCategoryFilterView(
-                        selectedCategories: $viewModel.selectedInfraCategories,
-                        showBuildings: $viewModel.showBuildings
-                    )
+                    VStack(spacing: 8) {
+                        // 인프라 필터 (건물 on/off 포함)
+                        InfraCategoryFilterView(
+                            selectedCategories: $viewModel.selectedInfraCategories,
+                            showBuildings: $viewModel.showBuildings
+                        )
+                        
+                        // 건물 타입 필터 (건물 표시가 켜져있을 때만)
+                        if viewModel.showBuildings {
+                            BuildingTypeFilterView(
+                                selectedBuildingTypes: $viewModel.selectedBuildingTypes
+                            )
+                        }
+                    }
                 }
                 
                 Spacer()

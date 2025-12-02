@@ -119,11 +119,6 @@ struct BuildingDetailView: View {
                 HStack(spacing: 16) {
                     Label("\(buildYear)년", systemImage: "calendar")
                         .font(.caption)
-                    
-                    if let totalUnits = building.totalUnits {
-                        Label("\(totalUnits)세대", systemImage: "building.2")
-                            .font(.caption)
-                    }
                 }
                 .foregroundStyle(.secondary)
             }
