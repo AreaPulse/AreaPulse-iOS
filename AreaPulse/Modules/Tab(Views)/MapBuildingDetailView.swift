@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import CoreLocation
 
 /// 건물 상세 정보 화면
 struct BuildingDetailView: View {
@@ -150,6 +151,12 @@ struct BuildingDetailView: View {
             }
             .frame(height: 200)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            // 직장까지의 카카오지도, 네이버지도 호출
+            NavigateToWorkplaceButton(
+                buildingCoordinate: building.coordinate,
+                buildingName: building.buildingName ?? "건물"
+            )
             
             // CCTV 개수 표시
             if !viewModel.realCctv.isEmpty {
@@ -330,6 +337,18 @@ struct BuildingDetailView: View {
                                 .fontWeight(.medium)
                             
                             HStack(spacing: 8) {
+                                // 거리 표시
+                                if let building = viewModel.building {
+                                    let distance = calculateDistance(from: building.coordinate, to: station.coordinate)
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "figure.walk")
+                                            .font(.caption2)
+                                        Text(formatDistance(distance))
+                                            .font(.caption2)
+                                    }
+                                    .foregroundStyle(.blue)
+                                }
+                                
                                 // 승객 수
                                 if let passengerNum = station.passengerNum {
                                     HStack(spacing: 2) {
@@ -449,7 +468,10 @@ struct BuildingDetailView: View {
                             .padding(.vertical, 8)
                     } else {
                         ForEach(viewModel.filteredSchools) { school in
-                            InfrastructureDetailRow(infrastructure: school)
+                            InfrastructureDetailRow(
+                                infrastructure: school,
+                                buildingCoordinate: viewModel.building?.coordinate
+                            )
                         }
                     }
                 }
@@ -479,7 +501,10 @@ struct BuildingDetailView: View {
                         }
                         
                         ForEach(items.prefix(5)) { infra in
-                            InfrastructureDetailRow(infrastructure: infra)
+                            InfrastructureDetailRow(
+                                infrastructure: infra,
+                                buildingCoordinate: viewModel.building?.coordinate
+                            )
                         }
                         
                         if items.count > 5 {
@@ -500,6 +525,22 @@ struct BuildingDetailView: View {
     }
     
     // MARK: - Helper Functions
+    
+    /// 두 좌표 간 거리 계산 (미터 단위)
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation)
+    }
+    
+    /// 거리 포맷팅 (m 또는 km)
+    private func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters))m"
+        } else {
+            return String(format: "%.1fkm", meters / 1000)
+        }
+    }
     
     /// 호선별 색상 반환
     private func getSubwayLineColor(for line: Int) -> Color {
@@ -602,6 +643,7 @@ struct AllTransactionsView: View {
 
 struct InfrastructureDetailRow: View {
     let infrastructure: Infrastructure
+    var buildingCoordinate: CLLocationCoordinate2D?
     
     var body: some View {
         HStack(spacing: 8) {
@@ -619,8 +661,36 @@ struct InfrastructureDetailRow: View {
             }
             
             Spacer()
+            
+            // 거리 표시
+            if let buildingCoord = buildingCoordinate {
+                let distance = calculateDistance(from: buildingCoord, to: infrastructure.coordinate)
+                HStack(spacing: 2) {
+                    Image(systemName: "figure.walk")
+                        .font(.caption2)
+                    Text(formatDistance(distance))
+                        .font(.caption2)
+                }
+                .foregroundStyle(.blue)
+            }
         }
         .padding(.vertical, 4)
+    }
+    
+    /// 두 좌표 간 거리 계산 (미터 단위)
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation)
+    }
+    
+    /// 거리 포맷팅 (m 또는 km)
+    private func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters))m"
+        } else {
+            return String(format: "%.1fkm", meters / 1000)
+        }
     }
 }
 

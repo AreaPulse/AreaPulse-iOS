@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import CoreLocation
 
 /// 좌표 검색 결과 화면
 struct PointSearchResultView: View {
@@ -14,6 +15,10 @@ struct PointSearchResultView: View {
     let longitude: Double
     
     @State private var viewModel: PointSearchResultViewModel
+    
+    private var searchCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
     
     init(latitude: Double, longitude: Double, navigationRouter: NavigationRouter) {
         self.latitude = latitude
@@ -274,10 +279,24 @@ struct PointSearchResultView: View {
             }
             
             if let nearest = items.first {
-                Text(nearest.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack {
+                    Text(nearest.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    // 가장 가까운 인프라 거리 표시
+                    let distance = calculateDistance(from: searchCoordinate, to: nearest.coordinate)
+                    HStack(spacing: 2) {
+                        Image(systemName: "figure.walk")
+                            .font(.caption2)
+                        Text(formatDistance(distance))
+                            .font(.caption)
+                    }
+                    .foregroundStyle(color)
+                }
             }
         }
         .padding()
@@ -313,7 +332,10 @@ struct PointSearchResultView: View {
                 Button {
                     viewModel.navigateToBuildingDetail(buildingId: building.id)
                 } label: {
-                    BuildingRowView(building: building)
+                    BuildingRowView(
+                        building: building,
+                        referenceCoordinate: searchCoordinate
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -338,6 +360,22 @@ struct PointSearchResultView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation)
+    }
+    
+    private func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters))m"
+        } else {
+            return String(format: "%.1fkm", meters / 1000)
+        }
     }
 }
 

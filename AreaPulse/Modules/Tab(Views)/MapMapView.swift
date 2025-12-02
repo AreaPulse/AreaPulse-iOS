@@ -227,18 +227,15 @@ struct MapView: View {
                     }
                 }
                 
-                // 건물 마커 (필터 적용)
+                // 건물 마커
                 ForEach(viewModel.filteredBuildings) { building in
                     Annotation(building.buildingName ?? "건물", coordinate: building.coordinate) {
-                        Button {
-                            viewModel.selectBuilding(building)
-                        } label: {
-                            BuildingAnnotationView(
-                                building: building,
-                                isSelected: viewModel.selectedBuilding?.id == building.id
-                            )
-                        }
+                        BuildingAnnotationView(
+                            building: building,
+                            isSelected: viewModel.selectedBuilding?.id == building.id
+                        )
                     }
+                    .annotationTitles(.hidden)
                 }
                 
                 // 인프라 마커
@@ -249,14 +246,44 @@ struct MapView: View {
                 }
             }
             .onTapGesture { screenPosition in
-                // MapReader를 사용하여 실제 탭한 위치의 좌표를 가져옴
-                if let coordinate = proxy.convert(screenPosition, from: .local) {
+                guard let coordinate = proxy.convert(screenPosition, from: .local) else { return }
+                
+                // 탭한 위치에서 가장 가까운 건물 찾기 (줌 레벨에 따라 threshold 조정)
+                let threshold = viewModel.region.span.latitudeDelta * 0.05
+                
+                if let nearestBuilding = findNearestBuilding(to: coordinate, threshold: threshold) {
+                    viewModel.selectBuilding(nearestBuilding)
+                } else {
+                    // 건물이 없으면 기존 로직
+                    viewModel.selectedBuilding = nil
                     Task {
                         await viewModel.handleMapTap(at: coordinate)
                     }
                 }
             }
         }
+    }
+    
+    // MARK: - Find Nearest Building
+    
+    /// 탭한 좌표에서 가장 가까운 건물 찾기
+    private func findNearestBuilding(to coordinate: CLLocationCoordinate2D, threshold: Double) -> Building? {
+        var nearestBuilding: Building?
+        var minDistance = threshold
+        
+        for building in viewModel.filteredBuildings {
+            let distance = hypot(
+                building.coordinate.latitude - coordinate.latitude,
+                building.coordinate.longitude - coordinate.longitude
+            )
+            
+            if distance < minDistance {
+                minDistance = distance
+                nearestBuilding = building
+            }
+        }
+        
+        return nearestBuilding
     }
     
     // MARK: - Nearby Info Button
