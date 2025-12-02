@@ -37,8 +37,13 @@ class MapViewModel {
     var searchResults: [MKMapItem] = []
     var showSearchResults: Bool = false
     
-    /// 인프라 필터 (사용자가 선택한 카테고리) - 기본값: 전체 선택
-    var selectedInfraCategories: Set<InfraCategory> = Set(InfraCategory.allCases)
+    /// 지도에서 사용할 **전역 인프라 카테고리**
+    /// -> 데이터/필터 모두 이 세 개만 사용
+    let baseInfraCategories: Set<InfraCategory> = Set(InfraCategory.mapFilterCategories)
+    
+    /// 인프라 필터 (사용자가 선택한 카테고리)
+    /// - 기본값: mapFilterCategories 전부 선택
+    var selectedInfraCategories: Set<InfraCategory> = Set(InfraCategory.mapFilterCategories)
     
     /// 건물 표시 여부 - 기본값: 표시
     var showBuildings: Bool = true
@@ -95,7 +100,13 @@ class MapViewModel {
             )
             
             self.nearbyBuildings = result.buildings
-            self.nearbyInfrastructure = result.infrastructure
+            
+            // ✅ 데이터 단계에서부터 school / subwayStation / park 만 남김
+            let baseFilteredInfra = result.infrastructure.filter { infra in
+                baseInfraCategories.contains(infra.category)
+            }
+            self.nearbyInfrastructure = baseFilteredInfra
+            
             self.regionStats = result.regionStats ?? []
             self.environmentData = result.environmentData ?? []
             
@@ -113,8 +124,11 @@ class MapViewModel {
         navigationRouter.push(to: .buildingDetail(buildingId: building.id))
     }
     
-    /// 인프라 카테고리 토글
+    /// 인프라 카테고리 토글 (사용자 뷰 필터)
     func toggleInfraCategory(_ category: InfraCategory) {
+        // 전역에서 허용한 카테고리 외에는 토글 불가
+        guard baseInfraCategories.contains(category) else { return }
+        
         if selectedInfraCategories.contains(category) {
             selectedInfraCategories.remove(category)
         } else {
@@ -122,12 +136,16 @@ class MapViewModel {
         }
     }
     
-    /// 필터링된 인프라 목록
+    /// ✅ 필터링된 인프라 목록
+    /// - nearbyInfrastructure: 이미 school/subway/park만 들어 있음
+    /// - selectedInfraCategories: 그중에서 유저가 켜둔 것만
     var filteredInfrastructure: [Infrastructure] {
         if selectedInfraCategories.isEmpty {
             return []
         }
-        return nearbyInfrastructure.filter { selectedInfraCategories.contains($0.category) }
+        return nearbyInfrastructure.filter { infra in
+            selectedInfraCategories.contains(infra.category)
+        }
     }
     
     /// 필터링된 건물 목록

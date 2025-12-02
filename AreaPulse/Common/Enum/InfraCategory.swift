@@ -46,4 +46,10 @@ enum InfraCategory: String, Codable, CaseIterable {
         case .cctv: return "video.fill"
         }
     }
+    
+    static let mapFilterCategories: [InfraCategory] = [
+            .school,
+            .subwayStation,
+            .park
+    ]
 }

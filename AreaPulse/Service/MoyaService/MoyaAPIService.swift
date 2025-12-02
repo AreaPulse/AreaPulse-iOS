@@ -32,7 +32,7 @@ final class MoyaAPIService: @unchecked Sendable {
     /// Mock 데이터 사용 여부
     /// true로 설정하면 실제 API 대신 sampleData를 반환합니다.
     /// API 구현 후 false로 변경하면 됩니다.
-    static var useMockData: Bool = false // ⬅️ 여기만 false로 바꾸면 실제 API 사용!
+    static var useMockData: Bool = false
     
     // MARK: - Initialization
     
@@ -43,7 +43,7 @@ final class MoyaAPIService: @unchecked Sendable {
             // Mock 모드면 stubbing을 활성화
             if Self.useMockData {
                 self.provider = MoyaProvider<AreaPulseAPI>(
-                    stubClosure: { _ in .immediate }, // Mock 데이터를 즉시 반환
+                    stubClosure: { _ in .immediate },
                     plugins: [
                         NetworkLoggerPlugin(configuration: .init(logOptions: .verbose))
                     ]
@@ -102,7 +102,7 @@ final class MoyaAPIService: @unchecked Sendable {
         return try decoder.decode(T.self, from: data)
     }
     
-    /// API 요청을 수행하고 Data를 반환합니다. (401 처리 포함)
+    /// API 요청을 수행하고 Data를 반환합니다. (401 자동 토큰 갱신 포함)
     private func requestData(_ target: AreaPulseAPI) async throws -> Data {
         return try await withCheckedThrowingContinuation { continuation in
             provider.request(target) { [weak self] result in
@@ -113,8 +113,9 @@ final class MoyaAPIService: @unchecked Sendable {
                 
                 switch result {
                 case .success(let response):
-                    // 401 Unauthorized - 토큰 만료
+                    // 401 Unauthorized - 토큰 만료 → 자동 갱신
                     if response.statusCode == 401 {
+                        print("🔄 Token expired, attempting refresh...")
                         self.handle401Error(target: target, continuation: continuation)
                         return
                     }
@@ -136,8 +137,9 @@ final class MoyaAPIService: @unchecked Sendable {
                     }
                     
                 case .failure(let error):
-                    // Moya validationType이 .successCodes면 401도 failure로 옴
+                    // 네트워크 에러 중 401 응답이 있는 경우
                     if let response = error.response, response.statusCode == 401 {
+                        print("🔄 Token expired (from failure), attempting refresh...")
                         self.handle401Error(target: target, continuation: continuation)
                         return
                     }
@@ -149,12 +151,12 @@ final class MoyaAPIService: @unchecked Sendable {
         }
     }
     
-    /// 401 에러 처리 - 토큰 갱신 후 재요청
+    /// 401 에러 처리 - 토큰 갱신 후 재요청 (에러 메시지 없이 자동 처리)
     private func handle401Error(
         target: AreaPulseAPI,
         continuation: CheckedContinuation<Data, Error>
     ) {
-        // refreshToken 요청 자체가 401이면 로그아웃
+        // refreshToken 요청 자체가 401이면 로그아웃 (이 경우만 에러)
         if case .refreshToken = target {
             print("❌ Refresh token expired, logging out")
             DispatchQueue.main.async {
@@ -171,6 +173,7 @@ final class MoyaAPIService: @unchecked Sendable {
         
         // 이미 갱신 중이면 대기
         if isRefreshing {
+            print("🔄 Token refresh already in progress, queuing request...")
             lock.unlock()
             return
         }
@@ -178,7 +181,7 @@ final class MoyaAPIService: @unchecked Sendable {
         isRefreshing = true
         lock.unlock()
         
-        // 토큰 갱신 시도
+        print("🔄 Starting token refresh...")
         performTokenRefresh()
     }
     
@@ -186,7 +189,7 @@ final class MoyaAPIService: @unchecked Sendable {
     private func performTokenRefresh() {
         guard let refreshToken = AuthManager.shared.refreshToken else {
             print("❌ No refresh token available")
-            handleRefreshFailure()
+            handleRefreshFailure(shouldLogout: true)
             return
         }
         
@@ -196,6 +199,13 @@ final class MoyaAPIService: @unchecked Sendable {
             
             switch result {
             case .success(let response):
+                // 갱신 토큰도 만료된 경우
+                if response.statusCode == 401 {
+                    print("❌ Refresh token also expired")
+                    self.handleRefreshFailure(shouldLogout: true)
+                    return
+                }
+                
                 do {
                     let filteredResponse = try response.filterSuccessfulStatusCodes()
                     let decoder = JSONDecoder()
@@ -208,17 +218,17 @@ final class MoyaAPIService: @unchecked Sendable {
                     
                     print("✅ Token refreshed successfully")
                     
-                    // 대기 중인 요청들 재시도
+                    // 대기 중인 요청들 재시도 (에러 없이 자동으로)
                     self.retryPendingRequests()
                     
                 } catch {
                     print("❌ Token refresh decode failed: \(error)")
-                    self.handleRefreshFailure()
+                    self.handleRefreshFailure(shouldLogout: true)
                 }
                 
             case .failure(let error):
-                print("❌ Token refresh failed: \(error)")
-                self.handleRefreshFailure()
+                print("❌ Token refresh network failed: \(error)")
+                self.handleRefreshFailure(shouldLogout: true)
             }
         }
     }
@@ -231,17 +241,22 @@ final class MoyaAPIService: @unchecked Sendable {
         isRefreshing = false
         lock.unlock()
         
+        print("🔄 Retrying \(requests.count) pending request(s)...")
+        
         for (target, continuation) in requests {
             provider.request(target) { result in
                 switch result {
                 case .success(let response):
                     do {
                         let filteredResponse = try response.filterSuccessfulStatusCodes()
+                        print("✅ Retried request succeeded")
                         continuation.resume(returning: filteredResponse.data)
                     } catch {
+                        print("❌ Retried request failed: \(error)")
                         continuation.resume(throwing: error)
                     }
                 case .failure(let error):
+                    print("❌ Retried request network error: \(error)")
                     continuation.resume(throwing: error)
                 }
             }
@@ -249,10 +264,11 @@ final class MoyaAPIService: @unchecked Sendable {
     }
     
     /// 갱신 실패 시 처리
-    private func handleRefreshFailure() {
-        // 로그아웃 처리
-        DispatchQueue.main.async {
-            AuthManager.shared.logout()
+    private func handleRefreshFailure(shouldLogout: Bool) {
+        if shouldLogout {
+            DispatchQueue.main.async {
+                AuthManager.shared.logout()
+            }
         }
         
         lock.lock()

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 // MARK: - Nearby Info Modal View
 
@@ -123,8 +124,9 @@ struct NearbyInfoModalView: View {
     
     private var infrastructureContent: some View {
         VStack(spacing: 16) {
-            // 카테고리별 그룹화
+            // 카테고리별 그룹화 (병원, 마트 제외)
             let infraByCategory = Dictionary(grouping: filteredInfrastructure) { $0.category }
+                .filter { $0.key != .hospital && $0.key != .mart }
             
             if infraByCategory.isEmpty {
                 emptyStateView(message: "검색 결과가 없습니다")
@@ -152,7 +154,10 @@ struct NearbyInfoModalView: View {
                             
                             // 인프라 목록
                             ForEach(items) { infra in
-                                InfrastructureRowView(infrastructure: infra)
+                                InfrastructureRowView(
+                                    infrastructure: infra,
+                                    referenceCoordinate: viewModel.selectedLocation
+                                )
                             }
                         }
                     }
@@ -173,7 +178,10 @@ struct NearbyInfoModalView: View {
                         viewModel.selectBuilding(building)
                         dismiss()
                     } label: {
-                        BuildingRowView(building: building)
+                        BuildingRowView(
+                            building: building,
+                            referenceCoordinate: viewModel.selectedLocation
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -211,3 +219,4 @@ struct NearbyInfoModalView: View {
         .padding(.vertical, 60)
     }
 }
+

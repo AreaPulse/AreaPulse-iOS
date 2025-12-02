@@ -31,7 +31,11 @@ let project = Project(
                         "NSAllowsArbitraryLoads": true
                     ],
                     "NSLocationWhenInUseUsageDescription": "주변 건물 및 인프라 정보를 제공하기 위해 위치 권한이 필요합니다.",
-                    "NSLocationAlwaysAndWhenInUseUsageDescription": "주변 건물 및 인프라 정보를 제공하기 위해 위치 권한이 필요합니다."
+                    "NSLocationAlwaysAndWhenInUseUsageDescription": "주변 건물 및 인프라 정보를 제공하기 위해 위치 권한이 필요합니다.",
+                    "LSApplicationQueriesSchemes": [
+                        "kakaomap",
+                        "nmap"
+                    ]
                 ]
             ),
             sources: ["AreaPulse/**"],

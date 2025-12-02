@@ -12,8 +12,9 @@ enum MapFilterCategory: Hashable, CaseIterable {
     case building
     case infra(InfraCategory)
     
+    /// 지도에서 사용할 카테고리만 (건물 + school/subway/park)
     static var allCases: [MapFilterCategory] {
-        [.building] + InfraCategory.allCases.map { .infra($0) }
+        [.building] + InfraCategory.mapFilterCategories.map { .infra($0) }
     }
     
     var displayName: String {
@@ -53,8 +54,8 @@ struct InfraCategoryFilterView: View {
                     }
                 )
                 
-                // 인프라 필터
-                ForEach(InfraCategory.allCases, id: \.self) { category in
+                // 인프라 필터 (school / subway / park 만)
+                ForEach(InfraCategory.mapFilterCategories, id: \.self) { category in
                     CategoryChip(
                         displayName: category.displayName,
                         iconName: category.iconName,
@@ -105,7 +106,7 @@ private struct CategoryChip: View {
 }
 
 #Preview {
-    @Previewable @State var selectedCategories: Set<InfraCategory> = Set(InfraCategory.allCases)
+    @Previewable @State var selectedCategories: Set<InfraCategory> = Set(InfraCategory.mapFilterCategories)
     @Previewable @State var showBuildings: Bool = true
     
     VStack(spacing: 20) {
