@@ -22,19 +22,31 @@ struct Region: Identifiable, Codable, Hashable {
     }
 }
 
-/// 지역 통계 모델 (T_REGION_STATS 테이블 대응)
+/// 지역 통계 모델 - API 응답에 맞게 재구성
 struct RegionStats: Identifiable, Codable, Hashable {
-    let id: Int
-    let bjdCode: String
-    let statsYear: Int
-    let statsType: StatsType
-    let statsValue: Double
+    let regionName: String?
+    let crimeNum: Int?
+    let cctvNum: Int?
+    let dangerousRating: Double?
+    let cctvSecurityRating: Double?
+    let passengerNum: Int?
+    let complexityRating: Double?
+    
+    var id: String { regionName ?? UUID().uuidString }
+    
+    /// 통계 데이터가 유효한지 확인 (모든 필드가 nil이 아닌 경우)
+    var hasValidData: Bool {
+        crimeNum != nil || cctvNum != nil || dangerousRating != nil ||
+        cctvSecurityRating != nil || passengerNum != nil || complexityRating != nil
+    }
     
     enum CodingKeys: String, CodingKey {
-        case id = "stats_id"
-        case bjdCode = "bjd_code"
-        case statsYear = "stats_year"
-        case statsType = "stats_type"
-        case statsValue = "stats_value"
+        case regionName = "region_name"
+        case crimeNum = "crime_num"
+        case cctvNum = "cctv_num"
+        case dangerousRating = "dangerous_rating"
+        case cctvSecurityRating = "cctv_security_rating"
+        case passengerNum = "passenger_num"
+        case complexityRating = "complexity_rating"
     }
 }

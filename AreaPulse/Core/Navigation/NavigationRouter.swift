@@ -34,6 +34,7 @@ class NavigationRouter: NavigationRoutable {
     /// - Parameter view: 이동할 화면을 나타내는 NavigationDestination
     func push(to view: NavigationDestination) {
         destination.append(view)
+        print("📍 NavigationRouter destination count: \(destination.count)")
     }
     
     /// 마지막 화면을 제거 (뒤로 가기)

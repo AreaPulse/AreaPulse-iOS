@@ -24,6 +24,7 @@ struct BuildingDetailResponseDTO: Codable {
     let nearbyInfrastructure: [Infrastructure]
     let regionStats: [RegionStats]
     let environmentData: [EnvironmentData]
+    let realCctv: [CCTVLocation]
     
     enum CodingKeys: String, CodingKey {
         case building
@@ -32,5 +33,12 @@ struct BuildingDetailResponseDTO: Codable {
         case nearbyInfrastructure = "nearby_infrastructure"
         case regionStats = "region_stats"
         case environmentData = "environment_data"
+        case realCctv = "real_cctv"
     }
+}
+
+/// CCTV 위치 정보
+struct CCTVLocation: Codable {
+    let lon: Double
+    let lat: Double
 }

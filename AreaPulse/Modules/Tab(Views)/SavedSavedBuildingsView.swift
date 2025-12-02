@@ -74,7 +74,7 @@ struct SavedBuildingsView: View {
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                 
-                                Text(saved.building.address)
+                                Text(saved.building.address ?? "주소 없음")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)

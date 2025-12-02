@@ -12,6 +12,11 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .map
     @Bindable var navigationRouter: NavigationRouter
     
+    // 각 탭별 네비게이션 경로
+    @State private var mapPath: [NavigationDestination] = []
+    @State private var savedPath: [NavigationDestination] = []
+    @State private var profilePath: [NavigationDestination] = []
+    
     enum Tab {
         case map
         case saved
@@ -21,7 +26,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // 지도 탭
-            NavigationStack(path: $navigationRouter.destination) {
+            NavigationStack(path: $mapPath) {
                 MapView(navigationRouter: navigationRouter)
                     .navigationDestination(for: NavigationDestination.self) { destination in
                         destinationView(for: destination)
@@ -33,8 +38,11 @@ struct MainTabView: View {
             .tag(Tab.map)
             
             // 찜 목록 탭
-            NavigationStack {
+            NavigationStack(path: $savedPath) {
                 SavedBuildingsView(navigationRouter: navigationRouter)
+                    .navigationDestination(for: NavigationDestination.self) { destination in
+                        destinationView(for: destination)
+                    }
             }
             .tabItem {
                 Label("찜", systemImage: "heart")
@@ -42,13 +50,31 @@ struct MainTabView: View {
             .tag(Tab.saved)
             
             // 프로필 탭
-            NavigationStack {
+            NavigationStack(path: $profilePath) {
                 ProfileView()
+                    .navigationDestination(for: NavigationDestination.self) { destination in
+                        destinationView(for: destination)
+                    }
             }
             .tabItem {
                 Label("프로필", systemImage: "person")
             }
             .tag(Tab.profile)
+        }
+        .onChange(of: navigationRouter.destination) { oldValue, newValue in
+            // NavigationRouter에서 push가 발생하면 현재 탭의 path에 추가
+            if newValue.count > oldValue.count, let lastDestination = newValue.last {
+                switch selectedTab {
+                case .map:
+                    mapPath.append(lastDestination)
+                case .saved:
+                    savedPath.append(lastDestination)
+                case .profile:
+                    profilePath.append(lastDestination)
+                }
+                // navigationRouter는 동기화용이므로 비움
+                navigationRouter.destination = []
+            }
         }
     }
     
@@ -65,7 +91,7 @@ struct MainTabView: View {
             BuildingDetailView(buildingId: buildingId, navigationRouter: navigationRouter)
             
         case .pointSearchResult(let latitude, let longitude):
-            Text("Point Search Result: \(latitude), \(longitude)")
+            PointSearchResultView(latitude: latitude, longitude: longitude, navigationRouter: navigationRouter)
             
         case .reviewWrite(let buildingId):
             ReviewWriteView(buildingId: buildingId, navigationRouter: navigationRouter)

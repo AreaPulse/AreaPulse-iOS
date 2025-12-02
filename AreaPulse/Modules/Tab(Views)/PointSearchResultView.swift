@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import CoreLocation
 
 /// 좌표 검색 결과 화면
 struct PointSearchResultView: View {
@@ -14,6 +15,10 @@ struct PointSearchResultView: View {
     let longitude: Double
     
     @State private var viewModel: PointSearchResultViewModel
+    
+    private var searchCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
     
     init(latitude: Double, longitude: Double, navigationRouter: NavigationRouter) {
         self.latitude = latitude
@@ -34,23 +39,35 @@ struct PointSearchResultView: View {
                 // 좌표 정보
                 coordinateInfo
                 
-                // 주변 건물 목록
                 if viewModel.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                         .padding()
-                } else if !viewModel.nearbyBuildings.isEmpty {
-                    buildingsList
                 } else {
-                    emptyState
+                    // 환경 정보
+                    if !viewModel.environmentData.isEmpty {
+                        environmentSection
+                    }
+                    
+                    // 주변 인프라
+                    if !viewModel.nearbyInfrastructure.isEmpty {
+                        infrastructureSection
+                    }
+                    
+                    // 주변 건물 목록
+                    if !viewModel.nearbyBuildings.isEmpty {
+                        buildingsList
+                    } else {
+                        emptyState
+                    }
                 }
             }
             .padding()
         }
-        .navigationTitle("좌표 검색")
+        .navigationTitle("위치 정보")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.searchNearbyBuildings()
+            await viewModel.loadAllData()
         }
         .alert("오류", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("확인") {
@@ -118,6 +135,191 @@ struct PointSearchResultView: View {
         )
     }
     
+    // MARK: - Environment Section
+    
+    private var environmentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("환경 정보")
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            if let envData = viewModel.environmentData.first {
+                HStack(spacing: 16) {
+                    // 평균 소음
+                    environmentCard(
+                        title: "평균 소음",
+                        value: String(format: "%.1f", envData.noiseAvg),
+                        unit: "dB",
+                        grade: envData.noiseGrade,
+                        icon: "speaker.wave.2"
+                    )
+                    
+                    // 최소 소음
+                    environmentCard(
+                        title: "최소 소음",
+                        value: String(format: "%.1f", envData.noiseMin),
+                        unit: "dB",
+                        grade: noiseGrade(envData.noiseMin),
+                        icon: "speaker.wave.1"
+                    )
+                    
+                    // 최대 소음
+                    environmentCard(
+                        title: "최대 소음",
+                        value: String(format: "%.1f", envData.noiseMax),
+                        unit: "dB",
+                        grade: noiseGrade(envData.noiseMax),
+                        icon: "speaker.wave.3"
+                    )
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+        )
+    }
+    
+    private func environmentCard(title: String, value: String, unit: String, grade: String, icon: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(gradeColor(grade))
+            
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+            
+            Text(unit)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            
+            Text(grade)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(gradeColor(grade))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+    
+    private func noiseGrade(_ db: Double?) -> String {
+        guard let db = db else { return "정보없음" }
+        switch db {
+        case 0...40: return "조용함"
+        case 41...55: return "보통"
+        case 56...70: return "시끄러움"
+        default: return "매우시끄러움"
+        }
+    }
+    
+    private func gradeColor(_ grade: String) -> Color {
+        switch grade {
+        case "좋음", "조용함": return .green
+        case "보통": return .yellow
+        case "나쁨", "시끄러움": return .orange
+        default: return .red
+        }
+    }
+    
+    // MARK: - Infrastructure Section
+    
+    private var infrastructureSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("주변 인프라")
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 12) {
+                infraCategoryCard(category: .subwayStation, icon: "tram.fill", color: .blue)
+                infraCategoryCard(category: .school, icon: "graduationcap.fill", color: .green)
+                infraCategoryCard(category: .hospital, icon: "cross.fill", color: .red)
+                infraCategoryCard(category: .mart, icon: "cart.fill", color: .orange)
+                infraCategoryCard(category: .park, icon: "leaf.fill", color: .mint)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+        )
+    }
+    
+    private func infraCategoryCard(category: InfraCategory, icon: String, color: Color) -> some View {
+        let items = viewModel.infrastructureByCategory(category)
+        
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Text(displayName(for: category))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Spacer()
+                Text("\(items.count)")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(color)
+            }
+            
+            if let nearest = items.first {
+                HStack {
+                    Text(nearest.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    // 가장 가까운 인프라 거리 표시
+                    let distance = calculateDistance(from: searchCoordinate, to: nearest.coordinate)
+                    HStack(spacing: 2) {
+                        Image(systemName: "figure.walk")
+                            .font(.caption2)
+                        Text(formatDistance(distance))
+                            .font(.caption)
+                    }
+                    .foregroundStyle(color)
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+    
+    private func displayName(for category: InfraCategory) -> String {
+        switch category {
+        case .subwayStation: return "지하철역"
+        case .school: return "학교"
+        case .hospital: return "병원"
+        case .mart: return "마트"
+        case .park: return "공원"
+        case .busStop: return "버스정류장"
+        case .bank: return "은행"
+        case .publicOffice: return "관공서"
+        case .cctv: return "CCTV"
+        }
+    }
+    
     // MARK: - Buildings List
     
     private var buildingsList: some View {
@@ -130,7 +332,10 @@ struct PointSearchResultView: View {
                 Button {
                     viewModel.navigateToBuildingDetail(buildingId: building.id)
                 } label: {
-                    BuildingRowView(building: building)
+                    BuildingRowView(
+                        building: building,
+                        referenceCoordinate: searchCoordinate
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -156,49 +361,21 @@ struct PointSearchResultView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
     }
-}
-
-/// 건물 한 줄 뷰
-private struct BuildingRowView: View {
-    let building: Building
     
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "building.2.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 40)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                if let buildingName = building.buildingName {
-                    Text(buildingName)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                } else {
-                    Text(building.address)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.primary)
-                }
-                
-                Text(building.address)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    // MARK: - Helper Functions
+    
+    private func calculateDistance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+        let fromLocation = CLLocation(latitude: from.latitude, longitude: from.longitude)
+        let toLocation = CLLocation(latitude: to.latitude, longitude: to.longitude)
+        return fromLocation.distance(from: toLocation)
+    }
+    
+    private func formatDistance(_ meters: Double) -> String {
+        if meters < 1000 {
+            return "\(Int(meters))m"
+        } else {
+            return String(format: "%.1fkm", meters / 1000)
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.secondarySystemBackground))
-        )
     }
 }
 

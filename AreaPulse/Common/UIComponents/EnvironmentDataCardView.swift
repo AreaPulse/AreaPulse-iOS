@@ -17,94 +17,96 @@ struct EnvironmentDataCardView: View {
                 .font(.headline)
                 .fontWeight(.bold)
             
-            if let pm10 = data.pm10Value {
-                HStack {
-                    Image(systemName: "aqi.medium")
-                        .foregroundStyle(.blue)
+            // 주소 정보
+            HStack {
+                Image(systemName: "location.fill")
+                    .foregroundStyle(.blue)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("주소")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("미세먼지")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(pm10)")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            
-                            Text("㎍/㎥")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            
-                            Text(data.pm10Grade)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(gradeColor(for: data.pm10Grade)))
-                        }
-                    }
-                    
-                    Spacer()
+                    Text(data.address)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                 }
+                
+                Spacer()
             }
             
-            if let pm25 = data.pm25Value {
-                HStack {
-                    Image(systemName: "aqi.low")
-                        .foregroundStyle(.purple)
+            Divider()
+            
+            // 평균 소음
+            HStack {
+                Image(systemName: "waveform")
+                    .foregroundStyle(.orange)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("평균 소음")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("초미세먼지")
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("\(data.noiseAvg, specifier: "%.1f")")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Text("dB")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(pm25)")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            
-                            Text("㎍/㎥")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            
-                            Text(data.pm25Grade)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Capsule().fill(gradeColor(for: data.pm25Grade)))
-                        }
+                        Text(data.noiseGrade)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(gradeColor(for: data.noiseGrade)))
                     }
-                    
-                    Spacer()
                 }
+                
+                Spacer()
             }
             
-            if let noise = data.noiseDb {
-                HStack {
-                    Image(systemName: "waveform")
-                        .foregroundStyle(.orange)
+            // 최대/최소 소음
+            HStack(spacing: 24) {
+                // 최대 소음
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("최대")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("소음")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(data.noiseMax, specifier: "%.1f")")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
                         
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("\(noise, specifier: "%.1f")")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            
-                            Text("dB")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text("dB")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
-                    
-                    Spacer()
                 }
+                
+                // 최소 소음
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("최소")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text("\(data.noiseMin, specifier: "%.1f")")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
+                        Text("dB")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                Spacer()
             }
+            .padding(.leading, 28) // Align with other content
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -117,16 +119,16 @@ struct EnvironmentDataCardView: View {
     
     private func gradeColor(for grade: String) -> Color {
         switch grade {
-        case "좋음": 
+        case "조용함": 
             return .green.opacity(0.2)
         case "보통": 
+            return .blue.opacity(0.2)
+        case "다소 시끄러움": 
             return .yellow.opacity(0.2)
-        case "나쁨": 
+        case "시끄러움": 
             return .orange.opacity(0.2)
-        case "매우나쁨": 
+        case "매우 시끄러움": 
             return .red.opacity(0.2)
-        case "정보없음":
-            return .gray.opacity(0.2)
         default: 
             return .gray.opacity(0.2)
         }
@@ -137,21 +139,30 @@ struct EnvironmentDataCardView: View {
     ScrollView {
         VStack(spacing: 16) {
             EnvironmentDataCardView(data: EnvironmentData(
-                id: 1,
-                stationId: 1,
-                measurementTime: Date(),
-                pm10Value: 35,
-                pm25Value: 15,
-                noiseDb: 55.5
+                address: "서울특별시 강남구 역삼동",
+                noiseMax: 72.5,
+                noiseAvg: 55.5,
+                noiseMin: 42.3,
+                latitude: 37.5665,
+                longitude: 126.9780
             ))
             
             EnvironmentDataCardView(data: EnvironmentData(
-                id: 2,
-                stationId: 2,
-                measurementTime: Date(),
-                pm10Value: 85,
-                pm25Value: 45,
-                noiseDb: 72.3
+                address: "서울특별시 종로구 청와대로",
+                noiseMax: 85.2,
+                noiseAvg: 72.3,
+                noiseMin: 58.1,
+                latitude: 37.5796,
+                longitude: 126.9770
+            ))
+            
+            EnvironmentDataCardView(data: EnvironmentData(
+                address: "서울특별시 마포구 상암동",
+                noiseMax: 52.1,
+                noiseAvg: 45.8,
+                noiseMin: 38.5,
+                latitude: 37.5794,
+                longitude: 126.8895
             ))
         }
         .padding()

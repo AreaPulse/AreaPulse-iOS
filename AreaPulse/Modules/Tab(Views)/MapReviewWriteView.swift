@@ -27,6 +27,11 @@ struct ReviewWriteView: View {
                     Text("평점을 선택해주세요")
                         .font(.headline)
                     
+                    Text(String(format: "%.1f", viewModel.rating))
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.yellow)
+                    
                     RatingStarsSelectionView(rating: $viewModel.rating)
                 }
                 .padding()

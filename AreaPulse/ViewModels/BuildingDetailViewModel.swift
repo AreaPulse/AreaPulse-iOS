@@ -11,6 +11,49 @@ import Observation
 @Observable
 class BuildingDetailViewModel {
     
+    // MARK: - Nested Types
+    
+    enum SchoolFilter: String, CaseIterable {
+        case all = "전체"
+        case kindergarten = "유치원"
+        case elementary = "초등학교"
+        case middle = "중학교"
+        case high = "고등학교"
+        case special = "특수학교"
+        
+        var matchingKeywords: [String] {
+            switch self {
+            case .all:
+                return []
+            case .kindergarten:
+                return ["유치원"]
+            case .elementary:
+                return ["초등학교", "초등"]
+            case .middle:
+                return ["중학교", "중학"]
+            case .high:
+                return ["고등학교", "고등"]
+            case .special:
+                return ["특수학교", "특수"]
+            }
+        }
+        
+        var schoolType: SchoolType? {
+            switch self {
+            case .all, .kindergarten:
+                return nil
+            case .elementary:
+                return .elementary
+            case .middle:
+                return .middle
+            case .high:
+                return .high
+            case .special:
+                return .special
+            }
+        }
+    }
+    
     // MARK: - Properties
     
     var building: Building?
@@ -19,10 +62,14 @@ class BuildingDetailViewModel {
     var nearbyInfrastructure: [Infrastructure] = []
     var regionStats: [RegionStats] = []
     var environmentData: [EnvironmentData] = []
+    var realCctv: [CCTVLocation] = []
     var isLoading: Bool = false
     var errorMessage: String?
     var isSaved: Bool = false
     var saveId: Int?
+    
+    var selectedSchoolFilter: SchoolFilter = .all
+    var showAllTransactions: Bool = false
     
     private let buildingId: Int
     private let apiService: AreaPulseAPIService
@@ -57,6 +104,7 @@ class BuildingDetailViewModel {
             self.nearbyInfrastructure = result.nearbyInfrastructure
             self.regionStats = result.regionStats
             self.environmentData = result.environmentData
+            self.realCctv = result.realCctv
             
         } catch {
             errorMessage = error.localizedDescription
@@ -109,5 +157,48 @@ class BuildingDetailViewModel {
     /// 최근 실거래가
     var recentTransaction: RealEstateTransaction? {
         transactions.sorted { $0.transactionDate > $1.transactionDate }.first
+    }
+    
+    /// 카테고리별 인프라 그룹화
+    var infrastructureByCategory: [InfraCategory: [Infrastructure]] {
+        Dictionary(grouping: nearbyInfrastructure) { $0.category }
+    }
+    
+    /// 학교 목록 (필터 적용)
+    var filteredSchools: [Infrastructure] {
+        let schools = nearbyInfrastructure.filter { $0.category == .school }
+        
+        if selectedSchoolFilter == .all {
+            return schools
+        }
+        
+        // extraData에서 school_type 확인하거나 이름으로 매칭
+        return schools.filter { infra in
+            // 1. extraData에 school_type이 있는 경우
+            if let extraData = infra.extraData,
+               let schoolTypeStr = extraData["school_type"]?.value as? String,
+               let schoolType = SchoolType(rawValue: schoolTypeStr) {
+                // 선택된 필터의 SchoolType과 비교
+                if let filterSchoolType = selectedSchoolFilter.schoolType {
+                    return schoolType == filterSchoolType
+                }
+            }
+            
+            // 2. school_type이 없거나 유치원인 경우 이름으로 매칭
+            return inferSchoolType(from: infra.name)
+        }
+    }
+    
+    /// 이름에서 학교 유형 유추
+    private func inferSchoolType(from name: String) -> Bool {
+        let keywords = selectedSchoolFilter.matchingKeywords
+        return keywords.contains { keyword in
+            name.contains(keyword)
+        }
+    }
+    
+    /// 지하철역 목록
+    var subwayStations: [Infrastructure] {
+        nearbyInfrastructure.filter { $0.category == .subwayStation }
     }
 }

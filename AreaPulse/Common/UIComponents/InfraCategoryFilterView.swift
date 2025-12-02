@@ -7,16 +7,58 @@
 
 import SwiftUI
 
-/// 인프라 카테고리 필터 버튼들
+/// 지도 필터 카테고리 (인프라 + 건물)
+enum MapFilterCategory: Hashable, CaseIterable {
+    case building
+    case infra(InfraCategory)
+    
+    /// 지도에서 사용할 카테고리만 (건물 + school/subway/park)
+    static var allCases: [MapFilterCategory] {
+        [.building] + InfraCategory.mapFilterCategories.map { .infra($0) }
+    }
+    
+    var displayName: String {
+        switch self {
+        case .building:
+            return "건물"
+        case .infra(let category):
+            return category.displayName
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .building:
+            return "building.2.fill"
+        case .infra(let category):
+            return category.iconName
+        }
+    }
+}
+
+/// 인프라 카테고리 필터 버튼들 (건물 포함)
 struct InfraCategoryFilterView: View {
     @Binding var selectedCategories: Set<InfraCategory>
+    @Binding var showBuildings: Bool
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(InfraCategory.allCases, id: \.self) { category in
+                // 건물 필터
+                CategoryChip(
+                    displayName: "건물",
+                    iconName: "building.2.fill",
+                    isSelected: showBuildings,
+                    action: {
+                        showBuildings.toggle()
+                    }
+                )
+                
+                // 인프라 필터 (school / subway / park 만)
+                ForEach(InfraCategory.mapFilterCategories, id: \.self) { category in
                     CategoryChip(
-                        category: category,
+                        displayName: category.displayName,
+                        iconName: category.iconName,
                         isSelected: selectedCategories.contains(category),
                         action: {
                             toggleCategory(category)
@@ -38,16 +80,17 @@ struct InfraCategoryFilterView: View {
 }
 
 private struct CategoryChip: View {
-    let category: InfraCategory
+    let displayName: String
+    let iconName: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Image(systemName: category.iconName)
+                Image(systemName: iconName)
                     .font(.caption)
-                Text(category.displayName)
+                Text(displayName)
                     .font(.caption)
                     .fontWeight(.medium)
             }
@@ -63,12 +106,18 @@ private struct CategoryChip: View {
 }
 
 #Preview {
-    @Previewable @State var selectedCategories: Set<InfraCategory> = [.school, .park]
+    @Previewable @State var selectedCategories: Set<InfraCategory> = Set(InfraCategory.mapFilterCategories)
+    @Previewable @State var showBuildings: Bool = true
     
     VStack(spacing: 20) {
-        InfraCategoryFilterView(selectedCategories: $selectedCategories)
+        InfraCategoryFilterView(
+            selectedCategories: $selectedCategories,
+            showBuildings: $showBuildings
+        )
         
-        Text("선택된 카테고리: \(selectedCategories.count)개")
+        Text("건물: \(showBuildings ? "표시" : "숨김")")
+            .font(.caption)
+        Text("선택된 인프라: \(selectedCategories.count)개")
             .font(.caption)
     }
 }
