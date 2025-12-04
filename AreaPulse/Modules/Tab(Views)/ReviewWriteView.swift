@@ -27,7 +27,7 @@ struct ReviewWriteView: View {
                     Text("평점을 선택해주세요")
                         .font(.headline)
                     
-                    Text(String(format: "%.1f", viewModel.rating))
+                    Text(String(format: "%.1f", Double(viewModel.rating)))
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundStyle(.yellow)
