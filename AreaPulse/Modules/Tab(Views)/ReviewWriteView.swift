@@ -78,6 +78,14 @@ struct ReviewWriteView: View {
         }
         .navigationTitle("리뷰 작성")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") {
+                    isContentFocused = false
+                }
+            }
+        }
         .alert("오류", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("확인") {
                 viewModel.errorMessage = nil
