@@ -1,10 +1,4 @@
-//
-//  ReviewWriteViewModel.swift
-//  AreaPulse
-//
-//  Created by 바견규 on 11/20/25.
-//
-
+// ReviewWriteViewModel.swift
 import Foundation
 import Observation
 
@@ -17,7 +11,6 @@ class ReviewWriteViewModel {
     var content: String = ""
     var isLoading: Bool = false
     var errorMessage: String?
-    var isSubmitSuccessful: Bool = false
     
     private let buildingId: Int
     private let apiService: AreaPulseAPIService
@@ -62,8 +55,6 @@ class ReviewWriteViewModel {
             )
             
             if response.success {
-                isSubmitSuccessful = true
-                // 리뷰 작성 성공 후 이전 화면으로 돌아가기
                 navigationRouter.pop()
             } else {
                 errorMessage = response.message
@@ -71,7 +62,6 @@ class ReviewWriteViewModel {
             
         } catch {
             errorMessage = error.localizedDescription
-            print("Error submitting review: \(error)")
         }
         
         isLoading = false

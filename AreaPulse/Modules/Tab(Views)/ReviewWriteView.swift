@@ -27,7 +27,7 @@ struct ReviewWriteView: View {
                     Text("평점을 선택해주세요")
                         .font(.headline)
                     
-                    Text(String(format: "%.1f", viewModel.rating))
+                    Text(String(format: "%.1f", Double(viewModel.rating)))
                         .font(.title)
                         .fontWeight(.bold)
                         .foregroundStyle(.yellow)
@@ -78,6 +78,14 @@ struct ReviewWriteView: View {
         }
         .navigationTitle("리뷰 작성")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") {
+                    isContentFocused = false
+                }
+            }
+        }
         .alert("오류", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("확인") {
                 viewModel.errorMessage = nil

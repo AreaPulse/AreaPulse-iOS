@@ -1,18 +1,10 @@
-//
-//  MainTabView.swift
-//  AreaPulse
-//
-//  Created by 바견규 on 11/20/25.
-//
-
+// MainTabView.swift
 import SwiftUI
 
-/// 메인 탭바 화면
 struct MainTabView: View {
     @State private var selectedTab: Tab = .map
     @Bindable var navigationRouter: NavigationRouter
     
-    // 각 탭별 네비게이션 경로
     @State private var mapPath: [NavigationDestination] = []
     @State private var savedPath: [NavigationDestination] = []
     @State private var profilePath: [NavigationDestination] = []
@@ -62,7 +54,7 @@ struct MainTabView: View {
             .tag(Tab.profile)
         }
         .onChange(of: navigationRouter.destination) { oldValue, newValue in
-            // NavigationRouter에서 push가 발생하면 현재 탭의 path에 추가
+            // Push 처리
             if newValue.count > oldValue.count, let lastDestination = newValue.last {
                 switch selectedTab {
                 case .map:
@@ -72,8 +64,29 @@ struct MainTabView: View {
                 case .profile:
                     profilePath.append(lastDestination)
                 }
-                // navigationRouter는 동기화용이므로 비움
                 navigationRouter.destination = []
+            }
+        }
+        .onChange(of: navigationRouter.popTrigger) { _, _ in
+            // Pop 처리
+            switch selectedTab {
+            case .map:
+                _ = mapPath.popLast()
+            case .saved:
+                _ = savedPath.popLast()
+            case .profile:
+                _ = profilePath.popLast()
+            }
+        }
+        .onChange(of: navigationRouter.popToRootTrigger) { _, _ in
+            // Pop to root 처리
+            switch selectedTab {
+            case .map:
+                mapPath.removeAll()
+            case .saved:
+                savedPath.removeAll()
+            case .profile:
+                profilePath.removeAll()
             }
         }
     }
@@ -103,7 +116,7 @@ struct MainTabView: View {
             SavedBuildingsView(navigationRouter: navigationRouter)
             
         case .savedBuildingDetail(let saveId):
-            Text("Saved Building Detail: \(saveId)")
+            BuildingDetailView(buildingId: saveId, navigationRouter: navigationRouter)
             
         case .profile:
             ProfileView()
